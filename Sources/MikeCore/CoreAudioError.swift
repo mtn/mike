@@ -2,12 +2,18 @@ import CoreAudio
 import Foundation
 
 public enum CoreAudioError: Error, LocalizedError, Equatable {
+    case audioDeviceNotFound(String)
+    case muteNotSupported(String)
     case unsupportedOperatingSystem
     case propertyDataSize(selector: AudioObjectPropertySelector, status: OSStatus)
     case propertyData(selector: AudioObjectPropertySelector, status: OSStatus)
 
     public var errorDescription: String? {
         switch self {
+        case .audioDeviceNotFound(let name):
+            return "CoreAudio device not found: \(name)"
+        case .muteNotSupported(let name):
+            return "CoreAudio device does not support output mute: \(name)"
         case .unsupportedOperatingSystem:
             return "CoreAudio process inspection requires macOS 14.2 or later."
         case .propertyDataSize(let selector, let status):

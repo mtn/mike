@@ -35,6 +35,21 @@ List all process objects currently known to CoreAudio:
 swift run mike-probe --list
 ```
 
+Inspect BlackHole without changing its state:
+
+```sh
+swift run mike-gate status
+```
+
+Gate BlackHole automatically while VoiceInk captures:
+
+```sh
+swift run mike-gate watch
+```
+
+The watcher remembers whether BlackHole was already muted. It only unmutes the
+device on exit or after recording when Mike was responsible for muting it.
+
 Run the tests:
 
 ```sh

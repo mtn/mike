@@ -9,10 +9,15 @@ let package = Package(
     ],
     products: [
         .library(name: "MikeCore", targets: ["MikeCore"]),
+        .executable(name: "mike-gate", targets: ["MikeGate"]),
         .executable(name: "mike-probe", targets: ["MikeProbe"]),
     ],
     targets: [
         .target(name: "MikeCore"),
+        .executableTarget(
+            name: "MikeGate",
+            dependencies: ["MikeCore"]
+        ),
         .executableTarget(
             name: "MikeProbe",
             dependencies: ["MikeCore"]
