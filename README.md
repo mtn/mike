@@ -2,7 +2,7 @@
 
 Mike is a macOS microphone router that keeps dictation out of calls.
 
-The planned audio path keeps VoiceInk connected directly to the physical
+The audio path keeps VoiceInk connected directly to the physical
 microphone while call applications receive a separately gated virtual feed:
 
 ```text
@@ -11,7 +11,7 @@ Physical microphone ─┤
                      └──> Mike ──> BlackHole 2ch ──> call applications
 ```
 
-Mike will combine two signals:
+Mike combines two signals:
 
 1. Karabiner-Elements pre-mutes the call feed before forwarding the existing
    VoiceInk toggle shortcut.
@@ -19,17 +19,59 @@ Mike will combine two signals:
    lifecycle source of truth, so cancellation and recording failures cannot
    leave the toggle state out of sync.
 
-## Activity probe
+The app:
 
-The first implementation milestone is `mike-probe`, a command-line utility
-that reports when VoiceInk starts and stops capturing microphone input.
-CoreAudio process objects require macOS 14.2 or later.
+- Routes any selected physical input into `BlackHole 2ch`.
+- Detects VoiceInk microphone capture through public CoreAudio process state.
+- Mutes BlackHole while VoiceInk records and restores its prior state afterward.
+- Preserves the existing Option-Space toggle workflow.
+- Fails with a clear error if BlackHole is not configured as 48 kHz,
+  interleaved stereo Float32.
+
+Mike requires macOS 15 or later.
+
+## Build and run
+
+Build the signed development app with XcodeGen:
+
+```sh
+make app
+```
+
+Build and launch:
+
+```sh
+make open
+```
+
+Run formatting and unit tests:
+
+```sh
+make test
+```
+
+## Karabiner integration
+
+The rule in `config/karabiner/mike-voiceink.json` pre-mutes BlackHole before
+Karabiner forwards Option-Space to VoiceInk. Mike listens for that command at:
+
+```text
+/tmp/com.mtn.mike-karabiner.sock
+```
+
+CoreAudio capture activity remains the lifecycle source of truth. If VoiceInk
+fails, is canceled, or stops through another control, Mike restores the prior
+BlackHole mute state without relying on a Karabiner toggle variable.
+
+## Diagnostic tools
+
+Report VoiceInk capture transitions:
 
 ```sh
 swift run mike-probe
 ```
 
-List all process objects currently known to CoreAudio:
+List all CoreAudio process objects:
 
 ```sh
 swift run mike-probe --list
@@ -41,17 +83,8 @@ Inspect BlackHole without changing its state:
 swift run mike-gate status
 ```
 
-Gate BlackHole automatically while VoiceInk captures:
+Run the standalone VoiceInk gate watcher:
 
 ```sh
 swift run mike-gate watch
-```
-
-The watcher remembers whether BlackHole was already muted. It only unmutes the
-device on exit or after recording when Mike was responsible for muting it.
-
-Run the tests:
-
-```sh
-swift test
 ```

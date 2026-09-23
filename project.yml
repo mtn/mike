@@ -1,0 +1,34 @@
+name: Mike
+
+options:
+  bundleIdPrefix: com.mtn
+  deploymentTarget:
+    macOS: "15.0"
+
+settings:
+  base:
+    DEVELOPMENT_TEAM: NEE55QD8MR
+    SWIFT_VERSION: "6.0"
+
+packages:
+  KarabinerElementsUserCommandReceiver:
+    url: https://github.com/pqrs-org/Karabiner-Elements-user-command-receiver.git
+    from: 1.2.0
+
+targets:
+  Mike:
+    type: application
+    platform: macOS
+    sources:
+      - path: App
+      - path: Sources/MikeCore
+    dependencies:
+      - package: KarabinerElementsUserCommandReceiver
+    settings:
+      base:
+        CODE_SIGN_STYLE: Automatic
+        INFOPLIST_FILE: App/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.mtn.mike
+        PRODUCT_NAME: Mike
+    scheme:
+      gatherCoverageData: true

@@ -4,6 +4,7 @@ import Foundation
 public enum CoreAudioError: Error, LocalizedError, Equatable {
     case audioDeviceNotFound(String)
     case muteNotSupported(String)
+    case unsupportedDeviceFormat(device: String, details: String)
     case unsupportedOperatingSystem
     case propertyDataSize(selector: AudioObjectPropertySelector, status: OSStatus)
     case propertyData(selector: AudioObjectPropertySelector, status: OSStatus)
@@ -14,6 +15,8 @@ public enum CoreAudioError: Error, LocalizedError, Equatable {
             return "CoreAudio device not found: \(name)"
         case .muteNotSupported(let name):
             return "CoreAudio device does not support output mute: \(name)"
+        case .unsupportedDeviceFormat(let device, let details):
+            return "\(device) has an unsupported audio format: \(details)"
         case .unsupportedOperatingSystem:
             return "CoreAudio process inspection requires macOS 14.2 or later."
         case .propertyDataSize(let selector, let status):

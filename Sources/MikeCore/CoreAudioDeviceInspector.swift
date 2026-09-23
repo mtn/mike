@@ -81,8 +81,38 @@ public struct CoreAudioDeviceInspector: Sendable {
             objectID: objectID,
             name: name,
             uid: uid,
+            inputChannelCount: readChannelCount(
+                from: objectID,
+                scope: kAudioDevicePropertyScopeInput
+            ),
+            outputChannelCount: readChannelCount(
+                from: objectID,
+                scope: kAudioDevicePropertyScopeOutput
+            ),
             supportsOutputMute: AudioObjectHasProperty(objectID, &muteAddress)
         )
+    }
+
+    private func readChannelCount(
+        from objectID: AudioObjectID,
+        scope: AudioObjectPropertyScope
+    ) -> UInt32 {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyStreamFormat,
+            mScope: scope,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var format = AudioStreamBasicDescription()
+        var byteCount = UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
+        let status = AudioObjectGetPropertyData(
+            objectID,
+            &address,
+            0,
+            nil,
+            &byteCount,
+            &format
+        )
+        return status == noErr ? format.mChannelsPerFrame : 0
     }
 
     private func readString(

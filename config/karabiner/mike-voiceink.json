@@ -1,0 +1,37 @@
+{
+    "title": "Mike VoiceInk integration",
+    "rules": [
+        {
+            "description": "Pre-mute Mike before forwarding Option-Space to VoiceInk",
+            "manipulators": [
+                {
+                    "type": "basic",
+                    "from": {
+                        "key_code": "spacebar",
+                        "modifiers": {
+                            "mandatory": [
+                                "option"
+                            ],
+                            "optional": [
+                                "caps_lock"
+                            ]
+                        }
+                    },
+                    "to": [
+                        {
+                            "send_user_command": {
+                                "endpoint": "/tmp/com.mtn.mike-karabiner.sock",
+                                "payload": {
+                                    "command": "prepare_voiceink_toggle"
+                                }
+                            }
+                        },
+                        {
+                            "from_event": true
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
