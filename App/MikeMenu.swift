@@ -60,11 +60,6 @@ struct MikeMenu: View {
             }
             .disabled(model.isRouting)
 
-            Text("Slack: Preferences → Audio & video → Microphone → BlackHole 2ch")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-
             if let errorMessage = model.errorMessage {
                 Text(errorMessage)
                     .font(.caption)

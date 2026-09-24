@@ -37,17 +37,6 @@ The app:
 
 Mike requires macOS 15 or later.
 
-## Set up Slack
-
-In **Slack → Preferences → Audio & video → Microphone**, select
-**BlackHole 2ch**. Leave Slack's speaker/output on your usual headphones or
-speakers. Slack saves its own microphone preference; Mike does not alter
-Slack's private settings or set the macOS default input to BlackHole.
-
-Keep **Follow VoiceInk microphone** enabled in Mike, or choose the same
-physical microphone manually in both Mike and VoiceInk. Do not select
-BlackHole as VoiceInk's microphone.
-
 ## Build and run
 
 Build the signed development app with XcodeGen:
