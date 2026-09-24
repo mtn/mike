@@ -18,6 +18,14 @@ final class MikeModel {
     var isRouting = false
     var isStarting = false
     var isVoiceInkCapturing = false
+    var followsVoiceInk = UserDefaults.standard.object(forKey: "followsVoiceInk") as? Bool ?? true {
+        didSet {
+            UserDefaults.standard.set(followsVoiceInk, forKey: "followsVoiceInk")
+            reconcileVoiceInkInput()
+        }
+    }
+    var voiceInkInputStatus = "Checking VoiceInk microphone…"
+    var voiceInkInputWarning = false
     var outputDevices: [AudioDeviceInfo] = []
     var selectedInputUID = ""
     var selectedOutputUID = ""
@@ -30,6 +38,7 @@ final class MikeModel {
     private let karabinerService = KarabinerCommandService()
     private var karabinerTask: Task<Void, Never>?
     private var metricsTask: Task<Void, Never>?
+    private var microphoneTask: Task<Void, Never>?
     private var router: AudioQueueMicrophoneRouter?
     private var startupTask: Task<Void, Never>?
 
@@ -47,6 +56,12 @@ final class MikeModel {
                 }
                 self.errorMessage =
                     "Karabiner integration failed: \(error.localizedDescription)"
+            }
+        }
+        microphoneTask = Task { [weak self] in
+            while !Task.isCancelled {
+                self?.reconcileVoiceInkInput()
+                try? await Task.sleep(for: .seconds(1))
             }
         }
     }
@@ -70,7 +85,7 @@ final class MikeModel {
             }
 
             selectDefaultsIfNeeded()
-            errorMessage = nil
+            reconcileVoiceInkInput()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -106,6 +121,14 @@ final class MikeModel {
             return
         }
 
+        reconcileVoiceInkInput()
+        guard !voiceInkInputWarning || !followsVoiceInk else {
+            status = "Not routing"
+            errorMessage =
+                "VoiceInk's microphone cannot be matched. Choose a working input in VoiceInk or turn off Follow VoiceInk."
+            return
+        }
+
         guard
             let inputDevice = inputDevices.first(where: {
                 $0.uid == selectedInputUID
@@ -126,16 +149,28 @@ final class MikeModel {
         }
 
         do {
+            let gateLease = RestoringMuteLease(
+                controller: try CoreAudioDeviceMuteController(device: outputDevice)
+            )
+            let isCapturing = try CoreAudioProcessInspector().isCapturing(
+                bundleID: "com.prakashjoshipax.VoiceInk"
+            )
+            if isCapturing {
+                try gateLease.acquire()
+            }
+
             let router = AudioQueueMicrophoneRouter(
                 inputDevice: inputDevice,
                 outputDevice: outputDevice
             )
-            try router.start()
-            let gateController = try CoreAudioDeviceMuteController(
-                device: outputDevice
-            )
+            do {
+                try router.start()
+            } catch {
+                try? gateLease.release()
+                throw error
+            }
             self.router = router
-            gateLease = RestoringMuteLease(controller: gateController)
+            self.gateLease = gateLease
             gateStateMachine = VoiceInkGateStateMachine()
             isRouting = true
             status = "\(inputDevice.name) → \(outputDevice.name)"
@@ -156,6 +191,10 @@ final class MikeModel {
         metricsTask?.cancel()
         metricsTask = nil
 
+        // Stop the writer before lifting the gate. Otherwise a device switch
+        // could briefly expose dictation through an active output stream.
+        router?.stop()
+        router = nil
         do {
             try gateLease?.release()
         } catch {
@@ -167,8 +206,6 @@ final class MikeModel {
         isVoiceInkCapturing = false
         callFeedStatus = "Open"
 
-        router?.stop()
-        router = nil
         isRouting = false
         status = "Not routing"
         metricsStatus = "Waiting for samples…"
@@ -176,6 +213,8 @@ final class MikeModel {
 
     func shutdown() {
         stopRouting()
+        microphoneTask?.cancel()
+        microphoneTask = nil
         karabinerTask?.cancel()
         karabinerTask = nil
 
@@ -288,6 +327,56 @@ final class MikeModel {
                 outputDevices.first(where: {
                     $0.uid == Self.preferredOutputUID
                 })?.uid ?? outputDevices.first?.uid ?? ""
+        }
+    }
+
+    private func reconcileVoiceInkInput() {
+        guard followsVoiceInk else {
+            voiceInkInputStatus = "Manual microphone selection"
+            voiceInkInputWarning = false
+            return
+        }
+
+        do {
+            let inspector = CoreAudioDeviceInspector()
+            let devices = try inspector.devices()
+            inputDevices = devices.filter {
+                $0.inputChannelCount > 0 && $0.uid != Self.preferredOutputUID
+            }
+            guard let selection = VoiceInkMicrophonePreferences().selection(),
+                let selected = selection.resolve(
+                    among: inputDevices,
+                    defaultInputUID: try inspector.defaultInputUID()
+                ),
+                selected.uid != Self.preferredOutputUID
+            else {
+                voiceInkInputStatus = "VoiceInk microphone unavailable; check VoiceInk’s Audio settings"
+                voiceInkInputWarning = true
+                if isRouting && !isCallFeedMuted && !isVoiceInkCapturing {
+                    stopRouting()
+                    errorMessage = "Routing stopped: Mike cannot identify VoiceInk's selected microphone."
+                }
+                return
+            }
+
+            voiceInkInputWarning = false
+            guard selectedInputUID != selected.uid else {
+                voiceInkInputStatus = "Following VoiceInk: \(selected.name)"
+                return
+            }
+            if isRouting && (isVoiceInkCapturing || isCallFeedMuted || isStarting) {
+                voiceInkInputStatus = "VoiceInk selected \(selected.name); switching after dictation"
+                return
+            }
+
+            selectedInputUID = selected.uid
+            voiceInkInputStatus = "Following VoiceInk: \(selected.name)"
+            guard isRouting else { return }
+            stopRouting()
+            toggleRouting()
+        } catch {
+            voiceInkInputStatus = "Could not read VoiceInk input: \(error.localizedDescription)"
+            voiceInkInputWarning = true
         }
     }
 }

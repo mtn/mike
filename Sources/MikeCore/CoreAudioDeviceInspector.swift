@@ -16,6 +16,24 @@ public struct CoreAudioDeviceInspector: Sendable {
         return device
     }
 
+    public func defaultInputUID() throws -> String? {
+        var address = propertyAddress(kAudioHardwarePropertyDefaultInputDevice)
+        var deviceID = AudioDeviceID(0)
+        var byteCount = UInt32(MemoryLayout<AudioDeviceID>.size)
+        let status = AudioObjectGetPropertyData(
+            AudioObjectID(kAudioObjectSystemObject),
+            &address,
+            0,
+            nil,
+            &byteCount,
+            &deviceID
+        )
+        guard status == noErr else {
+            throw CoreAudioError.propertyData(selector: address.mSelector, status: status)
+        }
+        return try devices().first(where: { $0.objectID == deviceID })?.uid
+    }
+
     private func readDeviceObjectList() throws -> [AudioDeviceID] {
         var address = propertyAddress(kAudioHardwarePropertyDevices)
         var byteCount: UInt32 = 0

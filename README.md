@@ -22,6 +22,13 @@ Mike combines two signals:
 The app:
 
 - Routes any selected physical input into `BlackHole 2ch`.
+- By default, follows VoiceInk's selected microphone (a pinned UID, the macOS
+  default, or the first available entry in VoiceInk's priority order). Mike
+  checks for changes and switches its route while VoiceInk is idle.
+- Warns and stops routing if it cannot resolve VoiceInk's configured input.
+  VoiceInk can independently fall back during an active recording; Mike cannot
+  inspect that private runtime choice, so verify the selected microphone after
+  reconnecting or disconnecting a device.
 - Detects VoiceInk microphone capture through public CoreAudio process state.
 - Mutes BlackHole while VoiceInk records and restores its prior state afterward.
 - Preserves the existing Option-Space toggle workflow.
@@ -29,6 +36,17 @@ The app:
   interleaved stereo Float32.
 
 Mike requires macOS 15 or later.
+
+## Set up Slack
+
+In **Slack → Preferences → Audio & video → Microphone**, select
+**BlackHole 2ch**. Leave Slack's speaker/output on your usual headphones or
+speakers. Slack saves its own microphone preference; Mike does not alter
+Slack's private settings or set the macOS default input to BlackHole.
+
+Keep **Follow VoiceInk microphone** enabled in Mike, or choose the same
+physical microphone manually in both Mike and VoiceInk. Do not select
+BlackHole as VoiceInk's microphone.
 
 ## Build and run
 

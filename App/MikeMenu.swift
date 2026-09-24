@@ -44,7 +44,14 @@ struct MikeMenu: View {
                     Text(device.name).tag(device.uid)
                 }
             }
-            .disabled(model.isRouting)
+            .disabled(model.isRouting || model.followsVoiceInk)
+
+            Toggle("Follow VoiceInk microphone", isOn: $model.followsVoiceInk)
+
+            Text(model.voiceInkInputStatus)
+                .font(.caption)
+                .foregroundStyle(model.voiceInkInputWarning ? .orange : .secondary)
+                .fixedSize(horizontal: false, vertical: true)
 
             Picker("Virtual microphone", selection: $model.selectedOutputUID) {
                 ForEach(model.outputDevices, id: \.uid) { device in
@@ -52,6 +59,11 @@ struct MikeMenu: View {
                 }
             }
             .disabled(model.isRouting)
+
+            Text("Slack: Preferences → Audio & video → Microphone → BlackHole 2ch")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
 
             if let errorMessage = model.errorMessage {
                 Text(errorMessage)
